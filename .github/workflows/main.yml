@@ -68,10 +68,4 @@ jobs:
           slot-name: 'production'
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           package: release.zip
-
-      - name: Set startup command
-        uses: azure/CLI@v1
-        with:
-          inlineScript: |
-            az webapp config set --resource-group prfrmnce_livetrck --name prfrmnclivetrck --startup-file "gunicorn --worker-class eventlet -w 1 app:app"
-            az webapp config appsettings set --resource-group prfrmnce_livetrck --name prfrmnclivetrck --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true
+          startup-command: 'gunicorn --worker-class eventlet -w 1 app:app'
