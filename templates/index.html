@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>System Monitor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #f0f0f0;
+            margin: 0;
+        }
+        .monitor {
+            text-align: center;
+            padding: 2rem;
+            border-radius: 10px;
+            background-color: white;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            width: 80%;
+            max-width: 800px;
+        }
+        h1 {
+            color: #333;
+        }
+        .charts-container {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-top: 1rem;
+        }
+        .chart-wrapper {
+            width: 45%;
+        }
+        .usage-details {
+            margin-top: 10px;
+            font-size: 1rem;
+            color: #555;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="monitor">
+        <h1>Live System Monitor</h1>
+        <div class="charts-container">
+            <div class="chart-wrapper">
+                <h2>CPU Usage</h2>
+                <canvas id="cpuChart"></canvas>
+                <div id="cpu-details" class="usage-details">-- %</div>
+            </div>
+            <div class="chart-wrapper">
+                <h2>Memory Usage</h2>
+                <canvas id="memoryChart"></canvas>
+                <div id="memory-details" class="usage-details">-- GB / -- GB</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const createChart = (ctx, label) => {
+                return new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: label,
+                            data: [],
+                            borderColor: 'rgba(0, 123, 255, 1)',
+                            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100
+                            },
+                            x: {
+                                display: false
+                            }
+                        },
+                        animation: {
+                            duration: 200
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            };
+
+            const cpuCtx = document.getElementById('cpuChart').getContext('2d');
+            const memoryCtx = document.getElementById('memoryChart').getContext('2d');
+
+            const cpuChart = createChart(cpuCtx, 'CPU Usage');
+            const memoryChart = createChart(memoryCtx, 'Memory Usage');
+
+            const updateChart = (chart, value) => {
+                chart.data.labels.push(new Date().toLocaleTimeString());
+                chart.data.datasets[0].data.push(value);
+
+                if (chart.data.labels.length > 20) {
+                    chart.data.labels.shift();
+                    chart.data.datasets[0].data.shift();
+                }
+                chart.update();
+            };
+
+            var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
+
+            socket.on('connect', function() {
+                console.log('Connected to server');
+            });
+
+            socket.on('system_update', function(data) {
+                updateChart(cpuChart, data.cpu);
+                updateChart(memoryChart, data.memory);
+                document.getElementById('cpu-details').innerText = `${data.cpu.toFixed(1)} %`;
+                document.getElementById('memory-details').innerText = 
+                    `${data.memory_used_gb} GB / ${data.memory_total_gb} GB`;
+            });
+        });
+    </script>
+</body>
+</html>
